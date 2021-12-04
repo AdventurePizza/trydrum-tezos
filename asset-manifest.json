@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/static/css/main.8228292e.chunk.css",
+    "main.js": "/static/js/main.5c458922.chunk.js",
+    "main.js.map": "/static/js/main.5c458922.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.9cc68277.js",
+    "runtime-main.js.map": "/static/js/runtime-main.9cc68277.js.map",
+    "static/js/2.469ea2a5.chunk.js": "/static/js/2.469ea2a5.chunk.js",
+    "static/js/2.469ea2a5.chunk.js.map": "/static/js/2.469ea2a5.chunk.js.map",
+    "static/js/3.20ed7228.chunk.js": "/static/js/3.20ed7228.chunk.js",
+    "static/js/3.20ed7228.chunk.js.map": "/static/js/3.20ed7228.chunk.js.map",
+    "index.html": "/index.html",
+    "static/css/main.8228292e.chunk.css.map": "/static/css/main.8228292e.chunk.css.map",
+    "static/js/2.469ea2a5.chunk.js.LICENSE.txt": "/static/js/2.469ea2a5.chunk.js.LICENSE.txt",
+    "static/media/drum.5ae1d20c.svg": "/static/media/drum.5ae1d20c.svg",
+    "static/media/drumbeat.e0f520f5.mp3": "/static/media/drumbeat.e0f520f5.mp3",
+    "static/media/musical-note.49e6a279.svg": "/static/media/musical-note.49e6a279.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.9cc68277.js",
+    "static/js/2.469ea2a5.chunk.js",
+    "static/css/main.8228292e.chunk.css",
+    "static/js/main.5c458922.chunk.js"
+  ]
+}

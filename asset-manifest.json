@@ -1,25 +1,26 @@
 {
   "files": {
-    "main.css": "/trydrum-tezos/static/css/main.8228292e.chunk.css",
-    "main.js": "/trydrum-tezos/static/js/main.d081c68c.chunk.js",
-    "main.js.map": "/trydrum-tezos/static/js/main.d081c68c.chunk.js.map",
-    "runtime-main.js": "/trydrum-tezos/static/js/runtime-main.5e5ef79f.js",
-    "runtime-main.js.map": "/trydrum-tezos/static/js/runtime-main.5e5ef79f.js.map",
-    "static/js/2.1bd75b05.chunk.js": "/trydrum-tezos/static/js/2.1bd75b05.chunk.js",
-    "static/js/2.1bd75b05.chunk.js.map": "/trydrum-tezos/static/js/2.1bd75b05.chunk.js.map",
-    "static/js/3.20ed7228.chunk.js": "/trydrum-tezos/static/js/3.20ed7228.chunk.js",
-    "static/js/3.20ed7228.chunk.js.map": "/trydrum-tezos/static/js/3.20ed7228.chunk.js.map",
+    "main.css": "/trydrum-tezos/static/css/main.ee5cbd40.chunk.css",
+    "main.js": "/trydrum-tezos/static/js/main.a7055603.chunk.js",
+    "main.js.map": "/trydrum-tezos/static/js/main.a7055603.chunk.js.map",
+    "runtime-main.js": "/trydrum-tezos/static/js/runtime-main.8154eb24.js",
+    "runtime-main.js.map": "/trydrum-tezos/static/js/runtime-main.8154eb24.js.map",
+    "static/js/2.1f8a0ca6.chunk.js": "/trydrum-tezos/static/js/2.1f8a0ca6.chunk.js",
+    "static/js/2.1f8a0ca6.chunk.js.map": "/trydrum-tezos/static/js/2.1f8a0ca6.chunk.js.map",
+    "static/js/3.d51cbbff.chunk.js": "/trydrum-tezos/static/js/3.d51cbbff.chunk.js",
+    "static/js/3.d51cbbff.chunk.js.map": "/trydrum-tezos/static/js/3.d51cbbff.chunk.js.map",
     "index.html": "/trydrum-tezos/index.html",
-    "static/css/main.8228292e.chunk.css.map": "/trydrum-tezos/static/css/main.8228292e.chunk.css.map",
-    "static/js/2.1bd75b05.chunk.js.LICENSE.txt": "/trydrum-tezos/static/js/2.1bd75b05.chunk.js.LICENSE.txt",
+    "static/css/main.ee5cbd40.chunk.css.map": "/trydrum-tezos/static/css/main.ee5cbd40.chunk.css.map",
+    "static/js/2.1f8a0ca6.chunk.js.LICENSE.txt": "/trydrum-tezos/static/js/2.1f8a0ca6.chunk.js.LICENSE.txt",
+    "static/media/index.css": "/trydrum-tezos/static/media/Inconsolata-Regular.ed7f6e5b.ttf",
     "static/media/drum.5ae1d20c.svg": "/trydrum-tezos/static/media/drum.5ae1d20c.svg",
     "static/media/drumbeat.e0f520f5.mp3": "/trydrum-tezos/static/media/drumbeat.e0f520f5.mp3",
     "static/media/musical-note.49e6a279.svg": "/trydrum-tezos/static/media/musical-note.49e6a279.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.5e5ef79f.js",
-    "static/js/2.1bd75b05.chunk.js",
-    "static/css/main.8228292e.chunk.css",
-    "static/js/main.d081c68c.chunk.js"
+    "static/js/runtime-main.8154eb24.js",
+    "static/js/2.1f8a0ca6.chunk.js",
+    "static/css/main.ee5cbd40.chunk.css",
+    "static/js/main.a7055603.chunk.js"
   ]
 }

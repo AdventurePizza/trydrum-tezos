@@ -58,5 +58,7 @@
     "@types/underscore": "^1.10.24",
     "@types/uuid": "^8.3.0"
   },
-  "homepage": "https://trydrum.net/"
+  "homepage": "https://trydrum.net/",
+  "proxy": "https://trydrum-backend.herokuapp.com"
+  
 }

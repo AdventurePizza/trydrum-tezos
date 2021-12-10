@@ -1,3 +1,6 @@
+
+// @ts-nocheck
+
 import "./App.css";
 
 import { CSSTransition, TransitionGroup } from "react-transition-group"; // ES6
@@ -9,112 +12,102 @@ import React, {
   useState,
 } from "react";
 
-import { FirebaseContext } from "./firebaseContext";
+//ui
 import { IconButton, Button } from "@material-ui/core";
-import { Twitter } from "@material-ui/icons";
 import _ from "underscore";
 import drum from "./assets/drum.svg";
-//@ts-ignore
+import construction from "./assets/construction.png";
 import drumBeat from "./assets/drumbeat.mp3";
-// import drumBeat from "./assets/leo.mp3";
-import io from "socket.io-client";
 import musicNote from "./assets/musical-note.svg";
+
+//logic
+import io from "socket.io-client";
 import { useSnackbar } from "notistack";
 import { v4 as uuidv4 } from "uuid";
 import { DAppClient } from "@airgap/beacon-sdk";
-import { token_transfer } from './token-transfer'
+import { FirebaseContext } from "./firebaseContext";
 
-const socketURL ="wss://adventure-drumbeat.herokuapp.com";
-// const socketURL = "wss://adventure-drumbeat.herokuapp.com";
+const socketURL =
+  window.location.hostname === "localhost"
+    ? "ws://localhost:8000"
+    : "wss://trydrum-backend.herokuapp.com";
+
+
 const socket = io(socketURL, { transports: ["websocket"] });
 const dAppClient = new DAppClient({ name: "Beacon Docs" });
-let activeAccount;
+const tempId = uuidv4();
 
 interface INote {
   key: string;
 }
 
 function App() {
+  const [activeAccount, setActiveAccount] = useState();
   const drumRef = React.createRef<HTMLImageElement>();
   const audioRef = React.createRef<HTMLAudioElement>();
   const _audioRef = useRef<HTMLAudioElement>();
-
   const toUpdateCountRef = useRef<number>(0);
-
   const [notes, setNotes] = useState<INote[]>([]);
   const [hasClickedDrum, setHasClickedDrum] = useState(false);
-  const { updateDrumCount: firebaseUpdateDrumCount, getDrumCount } = useContext(
+  const { updateDrumCount, claim, getDrumCount, syncRewards } = useContext(
     FirebaseContext
   );
-
   const [drumCount, setDrumCount] = useState(-1);
-
   const { enqueueSnackbar } = useSnackbar();
-
   const [noteCoords, setNoteCoords] = useState<{ top: number; left: number }>({
     top: 0,
     left: 0,
   });
-
 	const [synced, setSynced] = useState('sync');
-	const [balance, setBalance] = useState(0);
 	const [showUnsync, setShowUnsync] = useState(false);
-	const [xtzPrice, setXtzPrice] = useState(0);
-
   const [drumReward, setDrumReward] = useState(0);
   const isMobile = window.innerWidth <= 500;
 
-  useEffect(() => {
-		async function getAcc() {
-			activeAccount = await dAppClient.getActiveAccount();
-			if (activeAccount){
-			  setSynced(activeAccount.address.slice(0, 6) + "..." + activeAccount.address.slice(32, 36) );
-        //fetch wallet name if it exist for example, trydrum.tez
-			  let domain;
-			  await fetch('https://api.tezos.domains/graphql', {
-				  method: 'POST',
-				  headers: {
-					  'Content-Type': 'application/json',
-				  },
-				  body: JSON.stringify({
-					  query: `
-							  {
-								  reverseRecord(address: "`+ activeAccount.address +`"){owner domain{name}}
-							  }
-							  `,
-					  variables: {
-					  },
-				  }
-				  ),
-				  })
-				  .then((res) => res.json())
-				  .then((result) => {
-					  console.log(result);	
-					  if(result.data.reverseRecord){
-							domain = result.data.reverseRecord.domain.name;
-							setSynced(domain);
-						}
-				  });
-			  
-			  setShowUnsync(true);
-			  
-        //set XTZ balance
-			  fetch('https://api.tzkt.io/v1/accounts/' + activeAccount.address)
-				.then(response => response.json())
-				.then(data => setBalance(data.balance))
+  //fetch wallet name if it exist for example, trydrum.tez
+  async function getDomain(address: string) {
+    let domain;
+    await fetch('https://api.tezos.domains/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `
+            {
+              reverseRecord(address: "`+ address +`"){owner domain{name}}
+            }
+            `,
+        variables: {
+        },
+      }
+      ),
+      })
+      .then((res) => res.json())
+      .then((result) => {
+        //console.log(result);	
+        if(result.data.reverseRecord){
+          domain = result.data.reverseRecord.domain.name;
+          setSynced(domain);
+        }
+      });
+  }
 
-        fetch('https://min-api.cryptocompare.com/data/price?fsym=XTZ&tsyms=USD')
-				.then(response => response.json())
-				.then(data => setXtzPrice(data.USD))
-			}
-      //case its not already synced
-			else{
-			  setSynced('sync');
-			  setShowUnsync(false);
-			}
-		}
-		  getAcc();
-	}, []);
+  async function getAcc() {
+    setActiveAccount( await dAppClient.getActiveAccount());
+    if (activeAccount){
+      setSynced(activeAccount.address.slice(0, 6) + "..." + activeAccount.address.slice(32, 36) );
+      setShowUnsync(true);
+      getDomain(activeAccount.address);
+    }
+    else{
+      setSynced('sync');
+      setShowUnsync(false);
+    }
+  }
+
+  useEffect(() => {
+		getAcc();
+	}, [activeAccount]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -132,11 +125,16 @@ function App() {
     }
   }, [drumRef]);
 
+  
   useEffect(() => {
-    getDrumCount().then((count) => {
-      setDrumCount(count);
+    getDrumCount(activeAccount ? activeAccount.address : tempId).then((res) => {
+      if(res){
+        setDrumCount(res.count);
+        setDrumReward(res.claim);
+      }
     });
-  }, [getDrumCount]);
+  }, [getDrumCount, activeAccount]);
+
 
   useEffect(() => {
     const onDrumbeat = () => {
@@ -182,7 +180,7 @@ function App() {
 
     if (toUpdateCountRef.current !== null) {
       toUpdateCountRef.current++;
-      updateDrumCount();
+      updateDrumCount(toUpdateCountRef.current, activeAccount ? activeAccount.address : tempId);
     } else {
       toUpdateCountRef.current = 0;
     }
@@ -191,82 +189,83 @@ function App() {
     setDrumReward((drumReward) => drumReward + 1);
   };
 
-  // eslint-disable-next-line
-  const updateDrumCount = useCallback(
-    _.throttle(() => {
-      if (toUpdateCountRef.current) {
-        firebaseUpdateDrumCount(toUpdateCountRef.current);
-        toUpdateCountRef.current = 0;
-      }
-    }, 3000),
-    []
-  );
-
   async function unsync() {
-		activeAccount = await dAppClient.getActiveAccount();
+    setActiveAccount( await dAppClient.getActiveAccount())
 		if (activeAccount) {
 		  // User already has account connected, everything is ready
-		  // You can now do an operation request, sign request, or send another permission request to switch wallet
 		  dAppClient.clearActiveAccount().then(async () => {
-			activeAccount = await dAppClient.getActiveAccount();
-	
-			setSynced('sync');
-			setShowUnsync(false);
-			setBalance(0);
+        setActiveAccount( await dAppClient.getActiveAccount()) 
+        setSynced('sync');
+        setShowUnsync(false);
+        setDrumReward(0);
 		  });
 		}
-	  }
+	}
 	  
 	async function sync() {
-		activeAccount = await dAppClient.getActiveAccount();
+    setActiveAccount( await dAppClient.getActiveAccount())
+    //Already connected
 		if (activeAccount) {
-		  // User already has account connected, everything is ready
-		  // You can now do an operation request, sign request, or send another permission request to switch wallet
-
-		  console.log("Already connected:", activeAccount.address);
-		  return activeAccount;
-		} else {
-		  // The user is not connected. A button should be displayed where the user can connect to his wallet.
-		  console.log("Not connected!");
-		  try {
-			console.log("Requesting permissions...");
-			const permissions = await dAppClient.requestPermissions();
-			console.log("Got permissions:", permissions.address);
-			setSynced(permissions.address)
-			console.log("reload")
-			window.location.reload();
+      setSynced(activeAccount.address)
 			setShowUnsync(true);
+      getDomain(activeAccount.address);
 
-			fetch('https://api.tzkt.io/v1/accounts/' + permissions.address)
-			.then(response => response.json())
-			.then(data => setBalance(data.balance))
-		  } catch (error) {
-	
-			console.log("Got error:", error);
+      //A call for sending rewards to real account from the temporaray one 
+      const updatedBalance = (await syncRewards(tempId, permissions.address)).updatedBalance;
+      console.log( updatedBalance)
+      setDrumReward(updatedBalance);
+		  return activeAccount;
+		} 
+    // The user is not synced yet
+    else {
+		  try {
+        console.log("Requesting permissions...");
+        const permissions = await dAppClient.requestPermissions();
+        setActiveAccount( await dAppClient.getActiveAccount())
+        console.log("Got permissions:", permissions.address);
+        setSynced(permissions.address)
+        setShowUnsync(true);
+
+        getDomain(permissions.address);
+
+        //A call for sending rewards to real account from the temporaray one 
+        const updatedBalance = (await syncRewards(tempId, permissions.address)).updatedBalance;
+        console.log( updatedBalance)
+        setDrumReward(updatedBalance);
+
+        getDrumCount(permissions.address).then((res) => {
+          if(res){
+            setDrumCount(res.count);
+            setDrumReward(res.claim);
+          }
+        });
+
+		  } 
+      catch (error) {
+			  console.log("Got error:", error);
 		  }
 		}
-	  }
+	}
 
-    async function claimRewards() {
-      const RPC_URL = 'https://granadanet.api.tez.ie';
-      const CONTRACT = 'KT1VGf4ZoNMWNfBTEyBbRTX6q6TgHRnZ24zp' //address of the published contract
-      const SENDER =   'tz1aLMj6CXkADSH9tBtRLAcigBqUaSA3sRwx' //public address of the sender (find it in acc.json)
-      const RECEIVER = 'tz2KxNHVsBwmPRgMZZKJt3mYnPMcK8Smw49g' // recipient's public address (take it from the Tezos wallet you had created)
+  async function claimRewards() {
 
-      if(drumReward > 0){
-        console.log(new token_transfer(RPC_URL).transfer(CONTRACT, SENDER, RECEIVER, drumReward));
-        enqueueSnackbar("Recieved " + drumReward + " DRUM !" , {
-          variant: "success",
-        });
-        setDrumReward(0);
-      }
-      else{
-        enqueueSnackbar("You have nothing to claim :(" , {
-          variant: "warning",
-        });
-      }
+    enqueueSnackbar("Sending " + drumReward + " DRUM !" , {
+      variant: "default",
+    });
 
+    const result = await claim(activeAccount ? activeAccount.address : tempId);
+    if(result.success){
+      enqueueSnackbar( <div onClick={() => { window.open(result.message); }} > hash:  {result.message}  </div>   , {
+        variant: "success",
+      });
+    }else{
+      enqueueSnackbar( result.message  , {
+        variant: "error",
+      });
     }
+    setDrumReward(0);
+  }
+
   return (
     <div
       className="app-container"
@@ -324,20 +323,23 @@ function App() {
       </TransitionGroup>
 
       <div className="bottom-left" >
-        <Button  title={"Adventure Networks"} size={isMobile ? "small" : "medium"}  onClick={() => { window.open('https://adventurenetworks.net/#/'); }} >Adventure <br></br> Networks </Button>
+        <Button  title={"Adventure Networks"} size={isMobile ? "small" : "medium"}  onClick={() => { window.open('https://adventurenetworks.net/#/'); }} >  <div style={{textAlign: "left"}}> Adventure <br></br>Networks </div> </Button>
       </div>
 
       <div className="bottom-right">
-
+        <div>  <img style={{width: 30}} src={construction}/> under construction <img style={{width: 30}} src={construction}/> </div>
         <div style={{display: "flex", justifyContent: "flex-end"}}>
+        {showUnsync ?
         <Button  title={"claim"} size={isMobile ? "small" : "medium"}  onClick={ async () => { 	await claimRewards();	}} >  Claim {drumReward} DRUM  </Button> 
+        :  <div style={{fontSize: isMobile ? "1em" : "1.1em", marginRight: 12 }}> sync to claim {drumReward} DRUM </div>
+        }
         </div>
 
         <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end"}}>
-          {showUnsync && <Button size={isMobile ? "small" : "medium"}  title={"unsync"} onClick={() => { unsync() }} >unsync </Button>} 
+          {showUnsync && <Button size={isMobile ? "small" : "medium"}  title={"unsync"} onClick={() => { unsync() }} ><u>unsync</u> </Button>} 
           
           {showUnsync && <div> | </div>}
-          <Button  title={"sync"} size={isMobile ? "small" : "medium"}  onClick={async () => { 	await sync();	}} >{synced} </Button> 
+          <Button  title={"sync"} size={isMobile ? "small" : "medium"}  onClick={async () => { 	await sync();	}} ><u>{synced}</u> </Button> 
         </div>
       </div>
     </div>
@@ -345,3 +347,22 @@ function App() {
 }
 
 export default App;
+
+	//const [xtzPrice, setXtzPrice] = useState(0);
+	//const [balance, setBalance] = useState(0);
+      /* 
+      //set XTZ balance
+      fetch('https://api.tzkt.io/v1/accounts/' + activeAccount.address)
+      .then(response => response.json())
+      .then(data => setBalance(data.balance))
+
+      fetch('https://min-api.cryptocompare.com/data/price?fsym=XTZ&tsyms=USD')
+      .then(response => response.json())
+      .then(data => setXtzPrice(data.USD))
+      */
+
+        /*
+        fetch('https://api.tzkt.io/v1/accounts/' + permissions.address)
+        .then(response => response.json())
+        .then(data => setBalance(data.balance))
+        */

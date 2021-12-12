@@ -16,7 +16,8 @@ import React, {
 import { IconButton, Button } from "@material-ui/core";
 import _ from "underscore";
 import drum from "./assets/drum.svg";
-import construction from "./assets/construction.png";
+import greenDot from "./assets/green_dot.png";
+import scroll from "./assets/scroll.png";
 import drumBeat from "./assets/drumbeat.mp3";
 import musicNote from "./assets/musical-note.svg";
 
@@ -41,6 +42,7 @@ interface INote {
   key: string;
 }
 
+
 function App() {
   const [activeAccount, setActiveAccount] = useState();
   const drumRef = React.createRef<HTMLImageElement>();
@@ -49,7 +51,7 @@ function App() {
   const toUpdateCountRef = useRef<number>(0);
   const [notes, setNotes] = useState<INote[]>([]);
   const [hasClickedDrum, setHasClickedDrum] = useState(false);
-  const { updateDrumCount, claim, getDrumCount, syncRewards } = useContext(
+  const { firebaseUpdateDrumCount, claim, getDrumCount, syncRewards } = useContext(
     FirebaseContext
   );
   const [drumCount, setDrumCount] = useState(-1);
@@ -62,7 +64,20 @@ function App() {
 	const [showUnsync, setShowUnsync] = useState(false);
   const [drumReward, setDrumReward] = useState(0);
   const isMobile = window.innerWidth <= 500;
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [transactions, setTransactions] = useState([]);
 
+  const onUnload = e => {
+    e.preventDefault();
+    if (toUpdateCountRef.current) {
+      firebaseUpdateDrumCount(toUpdateCountRef.current, activeAccount ? activeAccount.address : tempId);
+      toUpdateCountRef.current = 0;
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("beforeunload", onUnload);
+    })
   //fetch wallet name if it exist for example, trydrum.tez
   async function getDomain(address: string) {
     let domain;
@@ -180,14 +195,28 @@ function App() {
 
     if (toUpdateCountRef.current !== null) {
       toUpdateCountRef.current++;
-      updateDrumCount(toUpdateCountRef.current, activeAccount ? activeAccount.address : tempId);
+      updateDrumCount();
+      //updateDrumCount(toUpdateCountRef.current, activeAccount ? activeAccount.address : tempId);
     } else {
       toUpdateCountRef.current = 0;
     }
 
+
+
     setDrumCount((count) => count + 1);
     setDrumReward((drumReward) => drumReward + 1);
   };
+
+  // eslint-disable-next-line
+  const updateDrumCount = useCallback(
+    _.throttle(() => {
+      if (toUpdateCountRef.current) {
+        firebaseUpdateDrumCount(toUpdateCountRef.current, activeAccount ? activeAccount.address : tempId);
+        toUpdateCountRef.current = 0;
+      }
+    }, 3000),
+    [activeAccount]
+  );
 
   async function unsync() {
     setActiveAccount( await dAppClient.getActiveAccount())
@@ -253,18 +282,24 @@ function App() {
       variant: "default",
     });
 
+    let newTransaction = { message: "Sending Claim DRUM Request", link: "", color: "black"}
+    setTransactions((transaction) => transaction.concat(newTransaction));
+
     const result = await claim(activeAccount ? activeAccount.address : tempId);
     if(result.success){
       enqueueSnackbar( <div onClick={() => { window.open(result.message); }} > hash:  {result.message}  </div>   , {
         variant: "success",
       });
+      setTransactions((transaction) => transaction.concat({ message: "Recieved " + result.amount +" DRUM !", link: result.message, color: "green"}));
     }else{
       enqueueSnackbar( result.message  , {
         variant: "error",
       });
+      setTransactions((transaction) => transaction.concat({ message: "Failed Transaction", link: "", color: "red"}));
     }
     setDrumReward(0);
   }
+
 
   return (
     <div
@@ -275,6 +310,12 @@ function App() {
 
       <div className="top-left" style={{fontSize: isMobile ? "1em" : "1.5em" }} > 	
         drum
+        &nbsp;
+        <img
+        title="operational, alpha v1.1"
+        src={greenDot}
+        width={isMobile ? 15 : 20}
+      />
       </div>
 
       <div className="top-middle"> 	
@@ -282,7 +323,16 @@ function App() {
       </div>
 
 
-      {drumCount >= 0 && <div className="top-right" style={{fontSize: isMobile ? "1em" : "1.5em" }}>{drumCount}  </div>}
+      {drumCount >= 0 && <div className="top-right" style={{fontSize: isMobile ? "1em" : "1.5em", textAlign:"end" }}>
+        <div style={{textAlign:"end", padding: "10px" }}> {drumCount} </div>
+        
+        <div style={{display: "flex", justifyContent: "flex-end"}}>
+        {showUnsync ?
+        <Button  title={"claim"} size={isMobile ? "small" : "medium"}  onClick={ async () => { 	await claimRewards();	}} >  Claim {drumReward} DRUM  </Button> 
+        :  <div style={{fontSize: isMobile ? "0.8em" : "0.8em", marginRight: 12 }}> sync to claim {drumReward} DRUM </div>
+        }
+        </div>
+      </div>}
 
       <img
         ref={drumRef}
@@ -327,20 +377,48 @@ function App() {
       </div>
 
       <div className="bottom-right">
-        <div>  <img style={{width: 30}} src={construction}/> under construction <img style={{width: 30}} src={construction}/> </div>
-        <div style={{display: "flex", justifyContent: "flex-end"}}>
-        {showUnsync ?
-        <Button  title={"claim"} size={isMobile ? "small" : "medium"}  onClick={ async () => { 	await claimRewards();	}} >  Claim {drumReward} DRUM  </Button> 
-        :  <div style={{fontSize: isMobile ? "1em" : "1.1em", marginRight: 12 }}> sync to claim {drumReward} DRUM </div>
-        }
-        </div>
+       
+        {showTransactions && <div style={{border: "solid 1px", marginRight:10, height: isMobile ? 200 : 400, overflowY: "auto", fontSize: isMobile ? "0.9em" : "1.3em"}}>
+          <div style={{display: "flex", alignItems: "center", justifyContent: "center"}}>
+          <div style={{width: 64, height:10}}></div>
 
+            Transactions List 
+
+          <Button  title={"transactions"} size={isMobile ? "small" : "medium"}  onClick={async () => { setShowTransactions(false) }} > X </Button> 
+
+          </div>
+          <div style={{ flexDirection: "column-reverse"}}>
+
+            {transactions &&
+            transactions.slice(0).reverse().map((transaction, index) => (
+              <div key={index.toString()}>
+                {
+                  <Button
+                    variant="outlined" 
+                    onClick={() => {
+                      if(transaction.link){
+                        window.open(transaction.link);
+                      }
+                    }}
+                    style={{ width: "100%", color: transaction.color}}
+                  >
+                    {transaction.message}
+                  </Button>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+        }
         <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end"}}>
           {showUnsync && <Button size={isMobile ? "small" : "medium"}  title={"unsync"} onClick={() => { unsync() }} ><u>unsync</u> </Button>} 
           
           {showUnsync && <div> | </div>}
           <Button  title={"sync"} size={isMobile ? "small" : "medium"}  onClick={async () => { 	await sync();	}} ><u>{synced}</u> </Button> 
+          |
+          <Button  title={"transactions"} size={isMobile ? "small" : "medium"}  onClick={async () => { 	setShowTransactions(!showTransactions)	}} > <img style={{width: 20}} src={scroll}/> </Button> 
         </div>
+
       </div>
     </div>
   );

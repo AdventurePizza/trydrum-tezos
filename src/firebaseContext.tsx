@@ -7,6 +7,7 @@ export interface IFirebaseContext {
 	getDrumCount: (address: string) => Promise<IFetchResponseBase>;
 	claim: (address: string) => Promise<IFetchResponseBase>;
 	syncRewards: (tempAddress: string, address: string) => void;
+	getDrumBalance: (address: string) => Promise<IFetchResponseBase>;
 }
 
 export const FirebaseContext = React.createContext<IFirebaseContext>({
@@ -14,6 +15,7 @@ export const FirebaseContext = React.createContext<IFirebaseContext>({
 	getDrumCount: () => Promise.resolve({ isSuccessful: false }),
 	claim: () => Promise.resolve({ isSuccessful: false }),
 	syncRewards: () => Promise.resolve({ isSuccessful: false }),
+	getDrumBalance: () => Promise.resolve({ isSuccessful: false }),
 });
 
 const fetchBase =
@@ -95,13 +97,30 @@ export const FirebaseProvider: React.FC = ({ children }) => {
 		[]
 	);
 
+	const getDrumBalance = useCallback(
+		async (address: string): Promise<IFetchResponseBase> => {
+			
+			const fetchRes = await fetch(fetchBase + `/users/drum/getBalance/${address}`, {
+				method: 'GET'
+			});
+
+			if (fetchRes.ok) {
+				return  await fetchRes.json();
+			}
+
+			return { isSuccessful: false, message: fetchRes.statusText };
+		},
+		[]
+	);
+
 	return (
 		<FirebaseContext.Provider
 			value={{
 				firebaseUpdateDrumCount,
 				claim,
 				getDrumCount,
-				syncRewards
+				syncRewards,
+				getDrumBalance
 			}}
 		>
 			{children}

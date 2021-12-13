@@ -81,7 +81,7 @@ function App() {
   const toUpdateCountRef = useRef<number>(0);
   const [notes, setNotes] = useState<INote[]>([]);
   const [hasClickedDrum, setHasClickedDrum] = useState(false);
-  const { firebaseUpdateDrumCount, claim, getDrumCount, syncRewards } = useContext(
+  const { firebaseUpdateDrumCount, claim, getDrumCount, syncRewards, getDrumBalance } = useContext(
     FirebaseContext
   );
   const [drumCount, setDrumCount] = useState(-1);
@@ -120,13 +120,14 @@ function App() {
       window.addEventListener("beforeunload", onUnload);
       
       if(version === 2 && isPlaying){
+        audioRef.current.muted = false;
         musicRef.current.play();
       }else{
         musicRef.current?.pause();
       }
     }
   )
-
+/*
   async function getDRUMBalance(address: string){
     fetch('https://api.tzstats.com/explorer/bigmap/52426/values')
     .then(response => response.json())
@@ -139,7 +140,7 @@ function App() {
       }
     })
   }  
-
+*/
   //fetch wallet name if it exist for example, trydrum.tez
   async function getDomain(address: string) {
     let domain;
@@ -182,10 +183,12 @@ function App() {
     }
   }
 
-  useEffect(() => {
+  useEffect(async () => {
 		getAcc();
-    getDRUMBalance(activeAccount ? activeAccount.address : "");
-	}, [activeAccount]);
+
+    setDrumBalance((await getDrumBalance(activeAccount ? activeAccount.address : "")).balance);
+
+	}, [activeAccount, drumBalance]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -384,7 +387,7 @@ function App() {
       style={{ minHeight: window.innerHeight - 10 }}
     >
       <audio src={drumBeat} ref={audioRef} autoPlay muted />
-      <audio src={playlist[currentIndex].url} ref={musicRef} autoPlay onEnded={next}/>
+      <audio src={playlist[currentIndex].url} ref={musicRef} autoPlay muted onEnded={next}/>
       
       <div className="top-left" style={{fontSize: isMobile ? "1em" : "1.5em", display:"flex", alignItems:"center" }} > 	
         drum

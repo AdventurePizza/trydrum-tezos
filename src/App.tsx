@@ -13,11 +13,13 @@ import React, {
 } from "react";
 
 //ui
-import { IconButton, Button } from "@material-ui/core";
+import { IconButton, Button, Select, MenuItem } from "@material-ui/core";
 import _ from "underscore";
 import drum from "./assets/drum.svg";
 import greenDot from "./assets/green_dot.png";
 import scroll from "./assets/scroll.png";
+import soundOn from "./assets/soundOn.png";
+import soundOff from "./assets/soundOff.png";
 import drumBeat from "./assets/drumbeat.mp3";
 import musicNote from "./assets/musical-note.svg";
 
@@ -27,6 +29,7 @@ import { useSnackbar } from "notistack";
 import { v4 as uuidv4 } from "uuid";
 import { DAppClient } from "@airgap/beacon-sdk";
 import { FirebaseContext } from "./firebaseContext";
+import ReactAudioPlayer from 'react-audio-player';
 
 const socketURL =
   window.location.hostname === "localhost"
@@ -42,12 +45,39 @@ interface INote {
   key: string;
 }
 
+const versionNames = [ "x", "v1.2", "v2.0" ];
+const playlist = [
+  { url: "https://archive.org/download/BWV998/00goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg aria"
+  },
+  {url: "https://archive.org/download/BWV998/01goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 1"
+  },
+  {url: "https://archive.org/download/BWV998/02goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 2"
+  },
+  {url: "https://archive.org/download/BWV998/03goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 3"
+  },
+  {url: "https://archive.org/download/BWV998/04goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 4"
+  },
+  {url: "https://archive.org/download/BWV998/05goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 5"
+  },
+  {url: "https://archive.org/download/BWV998/06goldberg.mp3", 
+    name: "J S Bach - BWV998 - The Goldberg Variation 6"
+  }
+]
+
 
 function App() {
   const [activeAccount, setActiveAccount] = useState();
   const drumRef = React.createRef<HTMLImageElement>();
   const audioRef = React.createRef<HTMLAudioElement>();
   const _audioRef = useRef<HTMLAudioElement>();
+  const musicRef = React.createRef<HTMLAudioElement>();
+  const _musicRef = useRef<HTMLAudioElement>();
   const toUpdateCountRef = useRef<number>(0);
   const [notes, setNotes] = useState<INote[]>([]);
   const [hasClickedDrum, setHasClickedDrum] = useState(false);
@@ -66,6 +96,17 @@ function App() {
   const isMobile = window.innerWidth <= 500;
   const [showTransactions, setShowTransactions] = useState(false);
   const [transactions, setTransactions] = useState([]);
+  const [drumBalance, setDrumBalance] = useState(0);
+  const [version, setVersion] = useState(2);
+  const [isPlaying, setIsPlaying] = useState(true);
+  function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+  }
+  const [currentIndex, setCurrentIndex] = useState(getRandomInt(playlist.length));
+
+  const handleChange = (event) => {
+    setVersion(event.target.value);
+  };
 
   const onUnload = e => {
     e.preventDefault();
@@ -76,8 +117,29 @@ function App() {
   };
 
   useEffect(() => {
-    window.addEventListener("beforeunload", onUnload);
+      window.addEventListener("beforeunload", onUnload);
+      
+      if(version === 2 && isPlaying){
+        musicRef.current.play();
+      }else{
+        musicRef.current?.pause();
+      }
+    }
+  )
+
+  async function getDRUMBalance(address: string){
+    fetch('https://api.tzstats.com/explorer/bigmap/52426/values')
+    .then(response => response.json())
+    .then(data => {
+      for(let i = 0; i < data.length; i++){
+        if(data[i].key[0] === address){
+          console.log("gotcha " + data[i].value)
+          setDrumBalance(data[i].value);
+        }
+      }
     })
+  }  
+
   //fetch wallet name if it exist for example, trydrum.tez
   async function getDomain(address: string) {
     let domain;
@@ -122,11 +184,15 @@ function App() {
 
   useEffect(() => {
 		getAcc();
+    getDRUMBalance(activeAccount ? activeAccount.address : "");
 	}, [activeAccount]);
 
   useEffect(() => {
     if (audioRef.current) {
       _audioRef.current = audioRef.current;
+    }
+    if (musicRef.current) {
+      _musicRef.current = musicRef.current;
     }
   });
 
@@ -300,6 +366,17 @@ function App() {
     setDrumReward(0);
   }
 
+  const next = () => {
+    if(playlist!.length === 0){
+      return;
+    }
+    else if(currentIndex === playlist!.length - 1 ){
+      setCurrentIndex(0);
+    }
+    else{
+      setCurrentIndex(currentIndex+1);
+    }
+  };
 
   return (
     <div
@@ -307,15 +384,28 @@ function App() {
       style={{ minHeight: window.innerHeight - 10 }}
     >
       <audio src={drumBeat} ref={audioRef} autoPlay muted />
-
-      <div className="top-left" style={{fontSize: isMobile ? "1em" : "1.5em" }} > 	
+      <audio src={playlist[currentIndex].url} ref={musicRef} autoPlay onEnded={next}/>
+      
+      <div className="top-left" style={{fontSize: isMobile ? "1em" : "1.5em", display:"flex", alignItems:"center" }} > 	
         drum
-        &nbsp;
+
+        <div style={{paddingInline:20 }}> 
+        <Select
+          value={version}
+          label="version"
+          onChange={handleChange}
+        >
+          <MenuItem value={1}> {versionNames[1] }</MenuItem>
+          <MenuItem value={2}> {versionNames[2] }</MenuItem>
+        </Select>
+        </div>
+
         <img
-        title="operational, alpha v1.1"
-        src={greenDot}
-        width={isMobile ? 15 : 20}
-      />
+          title={"operational, alpha " + versionNames[version]}
+          src={greenDot}
+          width={isMobile ? 12 : 15}
+          height={isMobile ? 12 : 15}
+        />
       </div>
 
       <div className="top-middle"> 	
@@ -324,14 +414,7 @@ function App() {
 
 
       {drumCount >= 0 && <div className="top-right" style={{fontSize: isMobile ? "1em" : "1.5em", textAlign:"end" }}>
-        <div style={{textAlign:"end", padding: "10px" }}> {drumCount} </div>
-        
-        <div style={{display: "flex", justifyContent: "flex-end"}}>
-        {showUnsync ?
-        <Button  title={"claim"} size={isMobile ? "small" : "medium"}  onClick={ async () => { 	await claimRewards();	}} >  Claim {drumReward} DRUM  </Button> 
-        :  <div style={{fontSize: isMobile ? "0.8em" : "0.8em", marginRight: 12 }}> sync to claim {drumReward} DRUM </div>
-        }
-        </div>
+        <div style={{textAlign:"end", paddingRight: "10px", paddingTop: "10px" }}> {drumCount} </div>
       </div>}
 
       <img
@@ -373,12 +456,21 @@ function App() {
       </TransitionGroup>
 
       <div className="bottom-left" >
-        <Button  title={"Adventure Networks"} size={isMobile ? "small" : "medium"}  onClick={() => { window.open('https://adventurenetworks.net/#/'); }} >  <div style={{textAlign: "left"}}> Adventure <br></br>Networks </div> </Button>
+        <Button  title={"Adventure Networks"} size={isMobile ? "small" : "medium"}  onClick={() => { }} >  <div style={{textAlign: "left"}}> Adventure <br></br>Networks </div> </Button>
+      </div>
+
+      <div className="bottom-middle"> 
+        {	
+        version === 2 &&
+        <div style={{textAlign: "center"}}>
+          Currently playing: {playlist[currentIndex].name}
+        </div>
+        }
       </div>
 
       <div className="bottom-right">
        
-        {showTransactions && <div style={{border: "solid 1px", marginRight:10, height: isMobile ? 200 : 400, overflowY: "auto", fontSize: isMobile ? "0.9em" : "1.3em"}}>
+        {showTransactions && <div style={{border: "solid 1px", marginRight:10, height: isMobile ? 180 : 400, overflowY: "auto", fontSize: isMobile ? "0.9em" : "1.3em", backgroundColor: "white"}}>
           <div style={{display: "flex", alignItems: "center", justifyContent: "center"}}>
           <div style={{width: 64, height:10}}></div>
 
@@ -387,8 +479,6 @@ function App() {
           <Button  title={"transactions"} size={isMobile ? "small" : "medium"}  onClick={async () => { setShowTransactions(false) }} > X </Button> 
 
           </div>
-          <div style={{ flexDirection: "column-reverse"}}>
-
             {transactions &&
             transactions.slice(0).reverse().map((transaction, index) => (
               <div key={index.toString()}>
@@ -407,10 +497,36 @@ function App() {
                 }
               </div>
             ))}
-          </div>
         </div>
         }
+        <div style={{display: "flex", justifyContent: "flex-end"}}>
+        {showUnsync ?
+        <Button  title={"claim"} size={isMobile ? "small" : "medium"}  onClick={ async () => { 	await claimRewards();	}} >  Claim {drumReward} DRUM  </Button> 
+        :  <div style={{fontSize: isMobile ? "0.8em" : "0.8em", marginRight: 12 }}> sync to claim {drumReward} DRUM </div>
+        }
+        </div>
+        <div style={{fontSize: isMobile ? "0.8em" : "1em", textAlign:"end", paddingRight: "10px" }}> Balance: {drumBalance} DRUM </div>
         <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end"}}>
+          { version === 2 && 
+            <div  title={"mute/unmute"} style= {{ padding: isMobile ? 0 : 10 }} 
+              onClick={() => { 
+                if(isPlaying){
+                  musicRef.current.pause()
+                }
+                else{
+                  musicRef.current.play()
+                } 
+                setIsPlaying(!isPlaying);  
+              }}
+            >
+              <img
+                title={"play"}
+                src={isPlaying ? soundOn : soundOff}
+                width={isMobile ? 16 : 20}
+                height={isMobile ? 16 : 20}
+              />
+            </div>
+          }
           {showUnsync && <Button size={isMobile ? "small" : "medium"}  title={"unsync"} onClick={() => { unsync() }} ><u>unsync</u> </Button>} 
           
           {showUnsync && <div> | </div>}

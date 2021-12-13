@@ -49,6 +49,13 @@
   bottom: 0;
 }
 
+.bottom-middle{
+  position: absolute;
+  left: "auto";
+  bottom: 80px;
+  right: "auto";
+}
+
 .right {
 
   right: 0;

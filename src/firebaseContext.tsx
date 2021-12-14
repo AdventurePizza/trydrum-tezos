@@ -8,6 +8,8 @@ export interface IFirebaseContext {
 	claim: (address: string) => Promise<IFetchResponseBase>;
 	syncRewards: (tempAddress: string, address: string) => void;
 	getDrumBalance: (address: string) => Promise<IFetchResponseBase>;
+	setMessage: (address: string) => Promise<IFetchResponseBase>;
+	getBlockchainMessage : () => Promise<IFetchResponseBase>;
 }
 
 export const FirebaseContext = React.createContext<IFirebaseContext>({
@@ -16,6 +18,7 @@ export const FirebaseContext = React.createContext<IFirebaseContext>({
 	claim: () => Promise.resolve({ isSuccessful: false }),
 	syncRewards: () => Promise.resolve({ isSuccessful: false }),
 	getDrumBalance: () => Promise.resolve({ isSuccessful: false }),
+	getBlockchainMessage: () => Promise.resolve({ isSuccessful: false }),
 });
 
 const fetchBase =
@@ -113,6 +116,22 @@ export const FirebaseProvider: React.FC = ({ children }) => {
 		[]
 	);
 
+	const getBlockchainMessage = useCallback(
+		async (): Promise<IFetchResponseBase> => {
+			
+			const fetchRes = await fetch(fetchBase + `/users/getBlockchainMessage`, {
+				method: 'GET'
+			});
+
+			if (fetchRes.ok) {
+				return  await fetchRes.json();
+			}
+
+			return { isSuccessful: false, message: fetchRes.statusText };
+		},
+		[]
+	);
+
 	return (
 		<FirebaseContext.Provider
 			value={{
@@ -120,7 +139,8 @@ export const FirebaseProvider: React.FC = ({ children }) => {
 				claim,
 				getDrumCount,
 				syncRewards,
-				getDrumBalance
+				getDrumBalance,
+				getBlockchainMessage
 			}}
 		>
 			{children}

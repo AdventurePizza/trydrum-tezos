@@ -52,8 +52,8 @@
 .bottom-middle{
   position: absolute;
   left: "auto";
-  bottom: 80px;
   right: "auto";
+  bottom: 80px;
 }
 
 .right {
@@ -81,6 +81,14 @@
   font-size: 1.5em;
 }
 
+.top-middle {
+  position: absolute;
+  left: "auto";
+  right: "auto";
+  top:0;
+  font-size: 1em;
+  margin-top: 50px;
+}
 
 .top-right {
   position: absolute;

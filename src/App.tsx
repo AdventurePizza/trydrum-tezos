@@ -13,7 +13,7 @@ import React, {
 } from "react";
 
 //ui
-import { IconButton, Button, Select, MenuItem } from "@material-ui/core";
+import { IconButton, Button, Select, MenuItem, TextField } from "@material-ui/core";
 import _ from "underscore";
 import drum from "./assets/drum.svg";
 import greenDot from "./assets/green_dot.png";
@@ -27,7 +27,7 @@ import musicNote from "./assets/musical-note.svg";
 import io from "socket.io-client";
 import { useSnackbar } from "notistack";
 import { v4 as uuidv4 } from "uuid";
-import { DAppClient } from "@airgap/beacon-sdk";
+import { DAppClient, TezosOperationType } from "@airgap/beacon-sdk";
 import { FirebaseContext } from "./firebaseContext";
 import ReactAudioPlayer from 'react-audio-player';
 
@@ -45,7 +45,7 @@ interface INote {
   key: string;
 }
 
-const versionNames = [ "x", "v1.2", "v2.0" ];
+const versionNames = [ "x", "v1.2", "v2.0", "v3.0" ];
 const playlist = [
   { url: "https://archive.org/download/BWV998/00goldberg.mp3", 
     name: "J S Bach - BWV998 - The Goldberg aria"
@@ -81,7 +81,7 @@ function App() {
   const toUpdateCountRef = useRef<number>(0);
   const [notes, setNotes] = useState<INote[]>([]);
   const [hasClickedDrum, setHasClickedDrum] = useState(false);
-  const { firebaseUpdateDrumCount, claim, getDrumCount, syncRewards, getDrumBalance } = useContext(
+  const { firebaseUpdateDrumCount, claim, getDrumCount, syncRewards, getDrumBalance, getBlockchainMessage } = useContext(
     FirebaseContext
   );
   const [drumCount, setDrumCount] = useState(-1);
@@ -99,6 +99,10 @@ function App() {
   const [drumBalance, setDrumBalance] = useState(0);
   const [version, setVersion] = useState(2);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showInput, setShowInput] = useState(false);
+  const [message, setMessage] = useState();
+  const [inputValue, setInputValue] = useState();
+
   function getRandomInt(max) {
     return Math.floor(Math.random() * max);
   }
@@ -119,28 +123,14 @@ function App() {
   useEffect(() => {
       window.addEventListener("beforeunload", onUnload);
       
-      if(version === 2 && isPlaying){
-        audioRef.current.muted = false;
+      if(version >= 2 && isPlaying){
         musicRef.current.play();
       }else{
         musicRef.current?.pause();
       }
     }
   )
-/*
-  async function getDRUMBalance(address: string){
-    fetch('https://api.tzstats.com/explorer/bigmap/52426/values')
-    .then(response => response.json())
-    .then(data => {
-      for(let i = 0; i < data.length; i++){
-        if(data[i].key[0] === address){
-          console.log("gotcha " + data[i].value)
-          setDrumBalance(data[i].value);
-        }
-      }
-    })
-  }  
-*/
+
   //fetch wallet name if it exist for example, trydrum.tez
   async function getDomain(address: string) {
     let domain;
@@ -187,8 +177,8 @@ function App() {
 		getAcc();
 
     setDrumBalance((await getDrumBalance(activeAccount ? activeAccount.address : "")).balance);
-
-	}, [activeAccount, drumBalance]);
+    setMessage((await getBlockchainMessage()).value);
+	}, [activeAccount, drumBalance, message]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -381,13 +371,60 @@ function App() {
     }
   };
 
+	const onChangeInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+		setInputValue(event.target.value);
+	};
+
+	const onKeyPressChat = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      try {
+        const result = await dAppClient.requestOperation({
+          operationDetails: [
+            {
+              kind: TezosOperationType.TRANSACTION,
+              amount: "0",
+              destination: "KT194J9NAhWX6PbZzfkL7Fp1ZpN5fndXe3et",
+              parameters: {
+                entrypoint: "default",
+                value: {
+                  string: inputValue,
+                },
+              },
+            },
+          ],
+        });
+      
+        console.log(result);
+        setInputValue("");
+        setShowInput(false);
+
+        enqueueSnackbar( <div onClick={() => { window.open(result.transactionHash); }} > Changed the message ! </div>   , {
+          variant: "success",
+        });
+
+        let newTransaction = { message: "Changed the message !", link: "https://tzkt.io/" + result.transactionHash, color: "green"}
+        setTransactions((transaction) => transaction.concat(newTransaction));
+      } catch (error) {
+        console.log(error);
+        enqueueSnackbar( result.message  , {
+          variant: error.toString(),
+        });
+        /*console.log(
+          `The contract call failed and the following error was returned:`,
+          error?.data[1]?.with?.string
+        );*/
+      }
+
+		}
+	};
+
   return (
     <div
       className="app-container"
       style={{ minHeight: window.innerHeight - 10 }}
     >
       <audio src={drumBeat} ref={audioRef} autoPlay muted />
-      <audio src={playlist[currentIndex].url} ref={musicRef} autoPlay muted onEnded={next}/>
+      <audio src={playlist[currentIndex].url} ref={musicRef} autoPlay onEnded={next}/>
       
       <div className="top-left" style={{fontSize: isMobile ? "1em" : "1.5em", display:"flex", alignItems:"center" }} > 	
         drum
@@ -400,6 +437,7 @@ function App() {
         >
           <MenuItem value={1}> {versionNames[1] }</MenuItem>
           <MenuItem value={2}> {versionNames[2] }</MenuItem>
+          <MenuItem value={3}> {versionNames[3] }</MenuItem>
         </Select>
         </div>
 
@@ -411,8 +449,25 @@ function App() {
         />
       </div>
 
-      <div className="top-middle"> 	
-        
+      <div className="top-middle"> 
+        {version === 3 &&
+        <>
+          {message}
+          <Button  title={"change"} size={isMobile ? "small" : "medium"}  onClick={ async () => { setShowInput(!showInput)}} >  Change  </Button>
+          <br></br>
+          {showInput &&
+            <TextField 
+            id="standard-basic" 
+            label="Change the message in blockchain" 
+            variant="standard"  
+            fullWidth
+            value={inputValue}
+            onChange={onChangeInput}
+            onKeyPress={onKeyPressChat}
+            />
+          }
+        </>	
+        }
       </div>
 
 
@@ -464,7 +519,7 @@ function App() {
 
       <div className="bottom-middle"> 
         {	
-        version === 2 &&
+        version >= 2 &&
         <div style={{textAlign: "center"}}>
           Currently playing: {playlist[currentIndex].name}
         </div>
@@ -510,7 +565,7 @@ function App() {
         </div>
         <div style={{fontSize: isMobile ? "0.8em" : "1em", textAlign:"end", paddingRight: "10px" }}> Balance: {drumBalance} DRUM </div>
         <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end"}}>
-          { version === 2 && 
+          { version >= 2 && 
             <div  title={"mute/unmute"} style= {{ padding: isMobile ? 0 : 10 }} 
               onClick={() => { 
                 if(isPlaying){

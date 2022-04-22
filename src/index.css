@@ -8,10 +8,7 @@ body {
 code {
   font-family: "Inconsolata";
 }
-::-webkit-scrollbar {
-  width: 0;  /* Remove scrollbar space */
-  background: transparent;  /* Optional: just make scrollbar invisible */
-}
+
 
 @font-face {
 	font-family: 'Inconsolata';

@@ -43,6 +43,11 @@
 .note-transition-exit-active {
 }
 
+.bottom {
+  bottom: 0;
+  width: 100vw;
+}
+
 .bottom-left {
   position: absolute;
   left: 0;

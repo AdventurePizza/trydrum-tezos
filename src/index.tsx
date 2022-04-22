@@ -6,13 +6,23 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { SnackbarProvider } from "notistack";
 import reportWebVitals from "./reportWebVitals";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from "./Analytics";
 
 ReactDOM.render(
-  <FirebaseProvider>
-    <SnackbarProvider maxSnack={3}>
-      <App />
-    </SnackbarProvider>
-  </FirebaseProvider>,
+  <BrowserRouter>
+    <FirebaseProvider>
+      <SnackbarProvider maxSnack={3}>
+        <Routes>
+          <Route path="/Analystics" element={<Analytics />}>
+          </Route>
+          <Route path='/' element={<App />}>
+          </Route>
+
+        </Routes>
+      </SnackbarProvider>
+    </FirebaseProvider>
+  </BrowserRouter>,
   document.getElementById("root")
 );
 
